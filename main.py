@@ -1,20 +1,20 @@
-import VAR  # type: ignore
 import os
 import shutil
 import re
 import time
 import secrets
 
+VER = "V4.7"
+
 LOG = True  # Toggle Performance logging
 SCOPE = ""  # Scope of the logging
 LOGS = []  # List to store logs
 
-components = {} # List of components
+components = {}  # List of components
+
 
 # Function to store logs
-def print_later(
-    string: str, hints: str = "none", sub_function: bool = False
-):
+def print_later(string: str, hints: str = "none", sub_function: bool = False):
     if LOG is False:  # Do nothing if logging is turned off
         return
 
@@ -25,7 +25,7 @@ def print_later(
     )
 
 
-#Performance logging wrapper
+# Performance logging wrapper
 def getperf_wrap(func):
     def wrap(*args, **kwargs):
         start = time.perf_counter_ns()  # start timer
@@ -38,11 +38,10 @@ def getperf_wrap(func):
 
     return wrap
 
+
 # A fileIO function for file operation
 @getperf_wrap
-def fileio(
-    location: str, mode: str, data: str = ""
-):
+def fileio(location: str, mode: str, data: str = ""):
     global SCOPE
     SCOPE = "FILEIO"
 
@@ -61,9 +60,10 @@ def fileio(
 
     return
 
+
 # Function to format the CSS
 @getperf_wrap
-def css_format(html_string: str): 
+def css_format(html_string: str):
     global SCOPE
     SCOPE = "CSS_FORMAT"
 
@@ -116,130 +116,140 @@ def css_format(html_string: str):
     print_later(f"Success formatting for id '{random_hex}'")
     return {"html": html_string, "style": style_element}
 
+
 # Function to format HTML
 @getperf_wrap
-def html_format(html_string: str):  
+def html_format(html_string: str):
     global SCOPE
     SCOPE = "HTML_FORMAT"
 
-    formated_string = html_string.replace("\n", "").replace("  ", "") # Remove newlines and spaces
+    formated_string = html_string.replace("\n", "").replace(
+        "  ", ""
+    )  # Remove newlines and spaces
     print_later("Formatted HTML")
-    
+
     return formated_string
 
-# Find and store all HTML file location
-@getperf_wrap
-def load_html_to_build(): 
-    global SCOPE
-    SCOPE = "LOADER"
 
-    print_later("Loaded HTMLs.")
-    return [
-        os.path.join(dirpath, file)
+class main:
+    def __init__(
+        self,
+        components_dir: str = "components/",
+        components_suffix: str = ".components.html",
+        frontend_dir: str = "frontend/",
+        build_output_dir: str = "dist/",
+    ):
+        self.components_dir = components_dir
+        self.components_suffix = components_suffix
+        self.frontend_dir = frontend_dir
+        self.build_output_dir = build_output_dir
+
+    # Find and store all HTML file location
+    @getperf_wrap
+    def load_html_to_build(self):
+        global SCOPE
+        SCOPE = "LOADER"
+
+        print_later("Loaded HTMLs.")
+        return [
+            os.path.join(dirpath, file)
+            for dirpath, _, filenames in os.walk(
+                self.build_output_dir
+            )  # Find all files in the build directory
+            for file in filenames
+            if file.endswith(".html")  # Only HTML files
+        ]
+
+    @getperf_wrap
+    def load_components_data(self):  # Load components and their HTML and CSS contents
+        global SCOPE
+        SCOPE = "LOADER"
+
         for dirpath, _, filenames in os.walk(
-            VAR.build_dir
-        )  # Find all files in the build directory
-        for file in filenames
-        if file.endswith(".html")  # Only HTML files
-    ]
-
-
-@getperf_wrap
-def load_components_data():  # Load components and their HTML and CSS contents
-    global SCOPE
-    SCOPE = "LOADER"
-
-    for dirpath, _, filenames in os.walk(
-        VAR.components_dir
-    ):  # Walk all files in the components directory
-        for file in filenames:
-            if file.endswith(
-                VAR.components_suffix
-            ):  # if it ends with the component suffix
-                full_path = os.path.join(dirpath, file)
-                print_later(
-                    f"Found component '{file.removesuffix(VAR.components_suffix)}'",
-                    sub_function=True,
-                )
-                components.update(
-                    {
-                        f"{file.removesuffix(VAR.components_suffix)}": {
-                            "path": full_path,
-                            "html": "",
-                            "css": "",
+            self.components_dir
+        ):  # Walk all files in the components directory
+            for file in filenames:
+                if file.endswith(
+                    self.components_suffix
+                ):  # if it ends with the component suffix
+                    full_path = os.path.join(dirpath, file)
+                    print_later(
+                        f"Found component '{file.removesuffix(self.components_suffix)}'",
+                        sub_function=True,
+                    )
+                    components.update(
+                        {
+                            f"{file.removesuffix(self.components_suffix)}": {
+                                "path": full_path,
+                                "html": "",
+                                "css": "",
+                            }
                         }
-                    }
+                    )
+
+        for component in components:  # Process all components
+            output = fileio(components[component]["path"], "read")  # Read the component
+            tool_output = css_format(output)
+            components[component]["html"] = tool_output.get(
+                "html"
+            )  # Set the component HTML
+            components[component]["css"] = tool_output.get("style")  # Set CSS
+            components[component]["uid"] = secrets.token_hex(32)  # Generate a random ID
+
+        print_later("Done loading components's HTML and CSS.")
+        return
+
+    @getperf_wrap
+    def init_build_dir(self):  # Initialization of the build folder
+        global SCOPE
+        SCOPE = "MAIN"
+
+        if os.path.exists(self.build_output_dir):
+            shutil.rmtree(self.build_output_dir)
+        print_later("Removed old directory.", sub_function=True)
+        shutil.copytree(self.frontend_dir, self.build_output_dir, dirs_exist_ok=True)
+        print_later("Copied build directory.", sub_function=True)
+        print_later("Initialized build directory.")
+
+    @getperf_wrap
+    def build(self):  # Main function
+        global SCOPE
+        SCOPE = "MAIN"
+        
+        print_later(f"Running YAFB {VER}!")
+
+        self.init_build_dir()
+
+        html_files = self.load_html_to_build()  # Load all HTML
+
+        self.load_components_data()  # Load components and their data
+
+        for html in html_files:
+            html_content = fileio(html, "read")  # Read the HTML
+
+            format_output = css_format(html_content)  # Format the CSS
+
+            html_content = format_output.get("html")  # Get HTML output
+
+            # Replace all matching component tag
+            for component in components:
+                html_content = html_content.replace(
+                    f":{component};",
+                    f"<!-- Begin {components[component]['uid']} -->{components[component]['html']} <!-- End {components[component]['uid']} -->",
                 )
 
-    for component in components:  # Process all components
-        output = fileio(components[component]["path"], "read")  # Read the component
-        tool_output = css_format(output)
-        components[component]["html"] = tool_output.get(
-            "html"
-        )  # Set the component HTML
-        components[component]["css"] = tool_output.get("style")  # Set CSS
-        components[component]["uid"] = secrets.token_hex(32)  # Generate a random ID
-
-    print_later("Done loading components's HTML and CSS.")
-    return
-
-
-@getperf_wrap
-def main():  # Main function
-    global SCOPE
-    SCOPE = "MAIN"
-
-    html_files = load_html_to_build()  # Load all HTML
-
-    load_components_data()  # Load components and their data
-
-    for html in html_files:
-        html_content = fileio(html, "read")  # Read the HTML
-
-        format_output = css_format(html_content)  # Format the CSS
-
-        html_content = format_output.get("html")  # Get HTML output
-
-        # Replace all matching component tag
-        for component in components:
-            html_content = html_content.replace(
-                f":{component};",
-                f"<!-- Begin {components[component]['uid']} -->{VAR.components[component]['html']} <!-- End {components[component]['uid']} -->",
-            )
+                html_content = html_content.replace(
+                    "</head>",
+                    "<style>" + components[component]["css"] + "</style>\n</head>",
+                )
 
             html_content = html_content.replace(
                 "</head>",
-                "<style>" + components[component]["css"] + "</style>\n</head>",
+                "<style>" + format_output.get("style") + "</style>\n</head>",
             )
 
-        html_content = html_content.replace(
-            "</head>",
-            "<style>" + format_output.get("style") + "</style>\n</head>",
-        )
+            html_content = html_format(html_content)
+            fileio(html, "write", html_content)
 
-        html_content = html_format(html_content)
-        fileio(html, "write", html_content)
-
-    SCOPE = "MAIN"
-    print_later("Finished building.")
-
-
-@getperf_wrap
-def init_build_dir():  # Initialization of the build folder
-    global SCOPE
-    SCOPE = "MAIN"
-
-    if os.path.exists(VAR.build_dir):
-        shutil.rmtree(VAR.build_dir)
-    print_later("Removed old directory.", sub_function=True)
-    shutil.copytree(VAR.frontend, VAR.build_dir, dirs_exist_ok=True)
-    print_later("Copied build directory.", sub_function=True)
-    print_later("Initialized build directory.")
-
-
-if __name__ == "__main__":
-    print("YAFB(Yet Another Frontend Builder) V4.6\n")
-    init_build_dir()
-    main()
-    for log in LOGS:  # print all logs after finishing building
-        print(log)
+        SCOPE = "MAIN"
+        print_later("Finished building.")
