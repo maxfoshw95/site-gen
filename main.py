@@ -7,12 +7,14 @@ import secrets
 
 LOG = True  # Toggle Performance logging
 SCOPE = ""  # Scope of the logging
-LOGS = []  # Array to store logs
+LOGS = []  # List to store logs
 
+components = {} # List of components
 
+# Function to store logs
 def print_later(
     string: str, hints: str = "none", sub_function: bool = False
-):  # Function to store logs
+):
     if LOG is False:  # Do nothing if logging is turned off
         return
 
@@ -23,7 +25,8 @@ def print_later(
     )
 
 
-def getperf_wrap(func):  # Performance logging wrapper
+#Performance logging wrapper
+def getperf_wrap(func):
     def wrap(*args, **kwargs):
         start = time.perf_counter_ns()  # start timer
         result = func(*args, **kwargs)
@@ -35,11 +38,11 @@ def getperf_wrap(func):  # Performance logging wrapper
 
     return wrap
 
-
+# A fileIO function for file operation
 @getperf_wrap
 def fileio(
     location: str, mode: str, data: str = ""
-):  # A fileIO function for easy management
+):
     global SCOPE
     SCOPE = "FILEIO"
 
@@ -58,9 +61,9 @@ def fileio(
 
     return
 
-
+# Function to format the CSS
 @getperf_wrap
-def css_format(html_string: str):  # Function to format the CSS
+def css_format(html_string: str): 
     global SCOPE
     SCOPE = "CSS_FORMAT"
 
@@ -113,18 +116,20 @@ def css_format(html_string: str):  # Function to format the CSS
     print_later(f"Success formatting for id '{random_hex}'")
     return {"html": html_string, "style": style_element}
 
-
+# Function to format HTML
 @getperf_wrap
-def html_format(html_string: str):  # Function to format HTML
+def html_format(html_string: str):  
     global SCOPE
     SCOPE = "HTML_FORMAT"
 
+    formated_string = html_string.replace("\n", "").replace("  ", "") # Remove newlines and spaces
     print_later("Formatted HTML")
-    return html_string.replace("\n", "").replace("  ", "")  # Remove newlines and spaces
+    
+    return formated_string
 
-
+# Find and store all HTML file location
 @getperf_wrap
-def load_html_to_build():  # Find and store all HTML file location
+def load_html_to_build(): 
     global SCOPE
     SCOPE = "LOADER"
 
@@ -156,7 +161,7 @@ def load_components_data():  # Load components and their HTML and CSS contents
                     f"Found component '{file.removesuffix(VAR.components_suffix)}'",
                     sub_function=True,
                 )
-                VAR.components.update(
+                components.update(
                     {
                         f"{file.removesuffix(VAR.components_suffix)}": {
                             "path": full_path,
@@ -166,14 +171,14 @@ def load_components_data():  # Load components and their HTML and CSS contents
                     }
                 )
 
-    for component in VAR.components:  # Process all components
-        output = fileio(VAR.components[component]["path"], "read")  # Read the component
+    for component in components:  # Process all components
+        output = fileio(components[component]["path"], "read")  # Read the component
         tool_output = css_format(output)
-        VAR.components[component]["html"] = tool_output.get(
+        components[component]["html"] = tool_output.get(
             "html"
         )  # Set the component HTML
-        VAR.components[component]["css"] = tool_output.get("style")  # Set CSS
-        VAR.components[component]["uid"] = secrets.token_hex(32)  # Generate a random ID
+        components[component]["css"] = tool_output.get("style")  # Set CSS
+        components[component]["uid"] = secrets.token_hex(32)  # Generate a random ID
 
     print_later("Done loading components's HTML and CSS.")
     return
@@ -196,15 +201,15 @@ def main():  # Main function
         html_content = format_output.get("html")  # Get HTML output
 
         # Replace all matching component tag
-        for component in VAR.components:
+        for component in components:
             html_content = html_content.replace(
                 f":{component};",
-                f"<!-- Begin {VAR.components[component]['uid']} -->{VAR.components[component]['html']} <!-- End {VAR.components[component]['uid']} -->",
+                f"<!-- Begin {components[component]['uid']} -->{VAR.components[component]['html']} <!-- End {components[component]['uid']} -->",
             )
 
             html_content = html_content.replace(
                 "</head>",
-                "<style>" + VAR.components[component]["css"] + "</style>\n</head>",
+                "<style>" + components[component]["css"] + "</style>\n</head>",
             )
 
         html_content = html_content.replace(
