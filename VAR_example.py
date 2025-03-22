@@ -3,5 +3,5 @@ components_dir = "./components/"
 components_suffix = ".components.html"
 
 frontend = "./frontend/"
-frontendbuild = "./frontend_build/"
+frontendbuild = "./dist/"
 
