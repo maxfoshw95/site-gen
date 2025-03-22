@@ -1,7 +1,7 @@
 components = {}
-components_dir = "./components/"
-components_suffix = ".components.html"
+components_dir = "./components/" # Components directory
+components_suffix = ".components.html" # Suffix for the component
 
-frontend = "./frontend/"
-frontendbuild = "./dist/"
+frontend = "./frontend/" # Frontend directory
+build_dir = "./dist/" # Build directory
 
