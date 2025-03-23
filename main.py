@@ -20,9 +20,10 @@ def print_later(string: str, hints: str = "none", sub_function: bool = False):
         return
 
     scope_text = ".child" if sub_function else ".main"
+    hint_text = '| hints: {hints}' if hints != 'none' else ''
 
     LOGS.append(
-        f"{SCOPE}{scope_text}: {string} {f'| hints: {hints}' if hints != 'none' else ''}"
+        f"{SCOPE}{scope_text}: {string} {hint_text}"
     )
 
 
@@ -176,6 +177,7 @@ class main:
                         html_files.update(
                             {
                                 f"{filepath}": {
+                                    "path":filepath,
                                     "html": tool_output.get("html"),
                                     "css": tool_output.get("css"),
                                 }
