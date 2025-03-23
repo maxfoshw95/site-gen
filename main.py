@@ -170,7 +170,7 @@ class main:
                             }
                         }
                     )
-                elif file.endswith(".html"):
+                elif file.endswith(".html") and not file.endswith(self.components_suffix):
                     HTML.append(os.path.join(dirpath, file))
                 
         for component in components:  # Process all components
