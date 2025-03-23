@@ -11,7 +11,7 @@ SCOPE = ""  # Scope of the logging
 LOGS = []  # List to store logs
 
 components = {}  # List of components
-
+html_files = {}
 
 # Function to store logs
 def print_later(string: str, hints: str = "none", sub_function: bool = False):
@@ -146,44 +146,43 @@ class main:
     def load_files(self):  # Load components and their HTML and CSS contents
         global SCOPE
         SCOPE = "LOADER"
-
-        HTML = []
         
         for dirpath, _, filenames in os.walk(
             self.build_output_dir
         ):  # Walk all files in the components directory
             for file in filenames:
-                if file.endswith(
-                    self.components_suffix
-                ):  # if it ends with the component suffix
-                    full_path = os.path.join(dirpath, file)
-                    print_later(
-                        f"Found component '{file.removesuffix(self.components_suffix)}'",
-                        sub_function=True,
-                    )
-                    components.update(
-                        {
-                            f"{file.removesuffix(self.components_suffix)}": {
-                                "path": full_path,
-                                "html": "",
-                                "css": "",
-                            }
-                        }
-                    )
-                elif file.endswith(".html") and not file.endswith(self.components_suffix):
-                    HTML.append(os.path.join(dirpath, file))
                 
-        for component in components:  # Process all components
-            output = fileio(components[component]["path"], "read")  # Read the component
-            tool_output = css_format(output)
-            components[component]["html"] = tool_output.get(
-                "html"
-            )  # Set the component HTML
-            components[component]["css"] = tool_output.get("style")  # Set CSS
-            components[component]["uid"] = secrets.token_hex(32)  # Generate a random ID
-
-        print_later("Done loading components's HTML and CSS.")
-        return HTML
+                filepath = os.path.join(dirpath, file)
+                
+                if file.endswith((self.components_suffix,".html")):
+                    output = fileio(filepath, "read")
+                    
+                    if file.endswith(self.components_suffix):
+                        tool_output = css_format(output)
+                    
+                    
+                        data = {
+                                f"{file.removesuffix(self.components_suffix)}": {
+                                    "path": filepath,
+                                    "html": tool_output.get("html"),
+                                    "css": tool_output.get("style"),
+                                }
+                            }
+                        
+                        components.update(data)
+                            
+                    elif file.endswith(".html") and not file.endswith(self.components_suffix):
+                        html_files.update({
+                            f"{filepath}" : {
+                                "html": tool_output.get("html"),
+                                "css": tool_output.get("style")
+                            }
+                        })
+                else:
+                    continue        
+                
+        print_later("Done loading files data")
+        return
 
     @getperf_wrap
     def init_build_dir(self):  # Initialization of the build folder
@@ -206,34 +205,32 @@ class main:
 
         self.init_build_dir()
 
-        html_files = self.load_files()  # Load components and their data
+        self.load_files()  # Load components and their data
 
         for html in html_files:
-            html_content = fileio(html, "read")  # Read the HTML
-
-            format_output = css_format(html_content)  # Format the CSS
-
-            html_content = format_output.get("html")  # Get HTML output
-
+            html_content = html_files.get(html)  # Get HTML output
+            
+            file_html = html_content.get("html")
+            
             # Replace all matching component tag
             for component in components:
-                html_content = html_content.replace(
+                file_html = file_html.replace(
                     f":{component};",
                     f"<!-- Begin {components[component]['uid']} -->{components[component]['html']} <!-- End {components[component]['uid']} -->",
                 )
 
-                html_content = html_content.replace(
+                file_html = file_html.replace(
                     "</head>",
                     "<style>" + components[component]["css"] + "</style>\n</head>",
                 )
 
-            html_content = html_content.replace(
+            file_html = file_html.replace(
                 "</head>",
-                "<style>" + format_output.get("style") + "</style>\n</head>",
+                "<style>" + html_content.get("style") + "</style>\n</head>",
             )
 
-            html_content = html_format(html_content)
-            fileio(html, "write", html_content)
+            file_html = html_format(file_html)
+            fileio(html_files[html], "write", file_html)
 
         SCOPE = "MAIN"
         print_later("Finished building.")
