@@ -13,6 +13,7 @@ LOGS = []  # List to store logs
 components = {}  # List of components
 html_files = {}
 
+
 # Function to store logs
 def print_later(string: str, hints: str = "none", sub_function: bool = False):
     if LOG is False:  # Do nothing if logging is turned off
@@ -69,13 +70,13 @@ def css_format(html_string: str):
 
     if "<style>" not in html_string:  # Check if there's style element present
         print_later("Exiting due to no CSS element found.", "basic_check")
-        return {"html": html_string, "style": ""}
+        return {"html": html_string, "css": ""}
 
     style_element: str = re.findall(r"<style[^>]*>([\s\S]*?)</style>", html_string)
 
     if len(style_element) <= 0:
         print_later("Exiting due to no CSS element found.", "regex")
-        return {"html": html_string, "style": ""}
+        return {"html": html_string, "css": ""}
 
     def extract(html_string: str):  # Get CSS class and ID
         return {
@@ -114,7 +115,7 @@ def css_format(html_string: str):
     print_later("Finished replacing CSS Class", sub_function=True)
 
     print_later(f"Success formatting for id '{random_hex}'")
-    return {"html": html_string, "style": style_element}
+    return {"html": html_string, "css": style_element}
 
 
 # Function to format HTML
@@ -146,41 +147,43 @@ class main:
     def load_files(self):  # Load components and their HTML and CSS contents
         global SCOPE
         SCOPE = "LOADER"
-        
+
         for dirpath, _, filenames in os.walk(
             self.build_output_dir
         ):  # Walk all files in the components directory
             for file in filenames:
-                
                 filepath = os.path.join(dirpath, file)
-                
-                if file.endswith((self.components_suffix,".html")):
+
+                if file.endswith((self.components_suffix, ".html")):
                     output = fileio(filepath, "read")
                     tool_output = css_format(output)
-                    
+
                     if file.endswith(self.components_suffix):
-                    
                         data = {
-                                f"{file.removesuffix(self.components_suffix)}": {
-                                    "path": filepath,
+                            f"{file.removesuffix(self.components_suffix)}": {
+                                "path": filepath,
+                                "html": tool_output.get("html"),
+                                "css": tool_output.get("css"),
+                                "uid": secrets.token_hex(32),
+                            }
+                        }
+
+                        components.update(data)
+
+                    elif file.endswith(".html") and not file.endswith(
+                        self.components_suffix
+                    ):
+                        html_files.update(
+                            {
+                                f"{filepath}": {
                                     "html": tool_output.get("html"),
-                                    "css": tool_output.get("style"),
-                                    "uid": secrets.token_hex(32)
+                                    "css": tool_output.get("css"),
                                 }
                             }
-                        
-                        components.update(data)
-                            
-                    elif file.endswith(".html") and not file.endswith(self.components_suffix):
-                        html_files.update({
-                            f"{filepath}" : {
-                                "html": tool_output.get("html"),
-                                "css": tool_output.get("style")
-                            }
-                        })
+                        )
                 else:
-                    continue        
-                
+                    continue
+
         print_later("Done loading files data")
         return
 
@@ -200,7 +203,7 @@ class main:
     def build(self):  # Main function
         global SCOPE
         SCOPE = "MAIN"
-        
+
         print_later(f"Running YAFB {VER}!\n")
 
         self.init_build_dir()
@@ -209,9 +212,9 @@ class main:
 
         for html in html_files:
             html_content = html_files.get(html)  # Get HTML output
-            
+
             file_html = html_content.get("html")
-            
+
             # Replace all matching component tag
             for component in components:
                 file_html = file_html.replace(
@@ -221,12 +224,12 @@ class main:
 
                 file_html = file_html.replace(
                     "</head>",
-                    "<style>" + components[component]["css"] + "</style>\n</head>",
+                    "<style>" + components[component].get("css") + "</style>\n</head>",
                 )
 
             file_html = file_html.replace(
                 "</head>",
-                "<style>" + html_content.get("style") + "</style>\n</head>",
+                "<style>" + html_content.get("css") + "</style>\n</head>",
             )
 
             file_html = html_format(file_html)
@@ -234,11 +237,10 @@ class main:
 
         SCOPE = "MAIN"
         print_later("Finished building.")
-        
-    
+
     def print_logs(self):
         if len(LOGS) == 0:
             return
-        
+
         for log in LOGS:
             print(log)
