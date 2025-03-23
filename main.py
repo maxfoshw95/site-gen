@@ -134,39 +134,23 @@ def html_format(html_string: str):
 class main:
     def __init__(
         self,
-        components_dir: str = "components/",
         components_suffix: str = ".components.html",
         frontend_dir: str = "frontend/",
         build_output_dir: str = "dist/",
     ):
-        self.components_dir = components_dir
         self.components_suffix = components_suffix
         self.frontend_dir = frontend_dir
         self.build_output_dir = build_output_dir
 
-    # Find and store all HTML file location
     @getperf_wrap
-    def load_html_to_build(self):
+    def load_files(self):  # Load components and their HTML and CSS contents
         global SCOPE
         SCOPE = "LOADER"
 
-        print_later("Loaded HTMLs.")
-        return [
-            os.path.join(dirpath, file)
-            for dirpath, _, filenames in os.walk(
-                self.build_output_dir
-            )  # Find all files in the build directory
-            for file in filenames
-            if file.endswith(".html")  # Only HTML files
-        ]
-
-    @getperf_wrap
-    def load_components_data(self):  # Load components and their HTML and CSS contents
-        global SCOPE
-        SCOPE = "LOADER"
-
+        HTML = []
+        
         for dirpath, _, filenames in os.walk(
-            self.components_dir
+            self.build_output_dir
         ):  # Walk all files in the components directory
             for file in filenames:
                 if file.endswith(
@@ -186,7 +170,9 @@ class main:
                             }
                         }
                     )
-
+                elif file.endswith(".html"):
+                    HTML.append(os.path.join(dirpath, file))
+                
         for component in components:  # Process all components
             output = fileio(components[component]["path"], "read")  # Read the component
             tool_output = css_format(output)
@@ -197,7 +183,7 @@ class main:
             components[component]["uid"] = secrets.token_hex(32)  # Generate a random ID
 
         print_later("Done loading components's HTML and CSS.")
-        return
+        return HTML
 
     @getperf_wrap
     def init_build_dir(self):  # Initialization of the build folder
@@ -216,13 +202,11 @@ class main:
         global SCOPE
         SCOPE = "MAIN"
         
-        print_later(f"Running YAFB {VER}!")
+        print_later(f"Running YAFB {VER}!\n")
 
         self.init_build_dir()
 
-        html_files = self.load_html_to_build()  # Load all HTML
-
-        self.load_components_data()  # Load components and their data
+        html_files = self.load_files()  # Load components and their data
 
         for html in html_files:
             html_content = fileio(html, "read")  # Read the HTML
@@ -253,3 +237,6 @@ class main:
 
         SCOPE = "MAIN"
         print_later("Finished building.")
+        
+        for log in LOGS:
+            print(log)
