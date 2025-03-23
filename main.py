@@ -239,7 +239,7 @@ class main:
         print_later("Finished building.")
         
     
-    def print_logs():
+    def print_logs(self):
         if len(LOGS) == 0:
             return
         
