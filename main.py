@@ -156,10 +156,9 @@ class main:
                 
                 if file.endswith((self.components_suffix,".html")):
                     output = fileio(filepath, "read")
+                    tool_output = css_format(output)
                     
                     if file.endswith(self.components_suffix):
-                        tool_output = css_format(output)
-                    
                     
                         data = {
                                 f"{file.removesuffix(self.components_suffix)}": {
