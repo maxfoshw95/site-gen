@@ -233,7 +233,7 @@ class main:
             )
 
             file_html = html_format(file_html)
-            fileio(html_files[html], "write", file_html)
+            fileio(html_files[html].get("path"), "write", file_html)
 
         SCOPE = "MAIN"
         print_later("Finished building.")
