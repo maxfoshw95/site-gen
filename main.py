@@ -4,7 +4,7 @@ import re
 import time
 import secrets
 
-VER = "V4.7"
+VER = "4.8"
 
 LOG = True  # Toggle Performance logging
 SCOPE = ""  # Scope of the logging
@@ -237,6 +237,11 @@ class main:
 
         SCOPE = "MAIN"
         print_later("Finished building.")
+        
+    
+    def print_logs():
+        if len(LOGS) == 0:
+            return
         
         for log in LOGS:
             print(log)
