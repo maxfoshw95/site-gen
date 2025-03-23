@@ -165,6 +165,7 @@ class main:
                                     "path": filepath,
                                     "html": tool_output.get("html"),
                                     "css": tool_output.get("style"),
+                                    "uid": secrets.token_hex(32)
                                 }
                             }
                         
